@@ -1,0 +1,10 @@
+.gallery {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  text-align: center;
+  flex-wrap: wrap;
+  list-style: none;
+  gap: 10px;
+}
