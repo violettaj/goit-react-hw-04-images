@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Searchbar } from './Searchbar/Searchbar';
 import { ImageGallery } from './ImageGallery/ImageGallery';
 import { fetchImages } from './Api/Api';
@@ -6,99 +6,76 @@ import { Button } from './Button/Button';
 import { Loader } from './Loader/Loader';
 import { Modal } from './Modal/Modal';
 
-export class App extends Component {
-  state = {
-    images: [],
-    topic: '',
-    page: 1,
-    totalHits: 500,
-    perPage: 12,
-    isLoading: false,
-    error: null,
-    showModal: false,
-    largeImageURL: '',
-  };
+export const App = () => {
+  const [images, setImages] = useState([]);
+  const [topic, setTopic] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalHits, setTotalHits] = useState(500);
+  const [perPage, setPerPage] = useState(12);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [ShowModal, setShowModal] = useState(false);
+  const [largeImageURL, setLargeImageURL] = useState('');
 
-  loadGallery = async () => {
-    this.setState({ isLoading: true });
+  const loadGallery = async () => {
+    setIsLoading(true);
     try {
-      const { topic, page, perPage } = this.state;
-
       const response = await fetchImages(topic, page, perPage);
+      setImages(prevState => [...prevState, ...response.hits]);
 
-      this.setState(prevState => {
-        return {
-          images: [...prevState.images, ...response.hits],
-          error: null,
-          totalHits: response.totalHits,
-        };
-      });
+      setTotalHits(response);
     } catch (error) {
-      this.setState({ error: error });
+      setError(error);
       throw new Error(error);
     } finally {
-      this.setState({ isLoading: false });
+      setIsLoading(false);
     }
   };
 
-  handleSubmit = e => {
+  const handleSubmit = e => {
     e.preventDefault();
     const value = e.target.search.value;
-    console.log({ value });
-    this.setState({ images: [], page: 1, topic: value });
+    setImages([]);
+    setPage(1);
+    setTopic(value);
   };
 
-  handleMore = () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
+  const handleMore = () => {
+    setPage(prevState => [prevState + 1]);
   };
 
-  componentDidUpdate(prevProps, prevState) {
-    if (
-      prevState.page !== this.state.page ||
-      prevState.topic !== this.state.topic
-    ) {
-      this.loadGallery();
-    }
-  }
-
-  handleShowModal = event => {
+  const handleShowModal = event => {
     const largeImageURL = event.target.srcset;
-    this.setState({
-      showModal: true,
-      largeImageURL: largeImageURL,
-    });
+    setShowModal(true);
+    setLargeImageURL(largeImageURL);
+  };
+  const onModalClose = () => {
+    setShowModal(false);
+    setLargeImageURL('');
   };
 
-  onModalClose = () => {
-    this.setState({
-      showModal: false,
-      largeImageURL: '',
-    });
-  };
-  render() {
-    return (
-      <div>
-        <Searchbar onSubmit={this.handleSubmit} />
-        <ImageGallery
-          images={this.state.images}
-          handleShowModal={this.handleShowModal}
+  useEffect(() => {
+    loadGallery();
+  }, [page, topic]);
+
+  return (
+    <div>
+      <Searchbar onSubmit={handleSubmit} />
+      <ImageGallery images={images} handleShowModal={handleShowModal} />
+      <Loader isLoading={isLoading} />
+      {images.length > 0 && page * perPage < totalHits && (
+        <Button
+          btnShow={isLoading ? 'Loading...' : 'Load More'}
+          handleMore={handleMore}
         />
-        <Loader isLoading={this.state.isLoading} />
-        {this.state.images.length > 0 &&
-          this.state.page * this.state.perPage < this.state.totalHits && (
-            <Button
-              btnShow={this.state.isLoading ? 'Loading...' : 'Load More'}
-              handleMore={this.handleMore}
-            />
-          )}
-        {this.state.showModal && (
-          <Modal
-            largeImageURL={this.state.largeImageURL}
-            onKeyPress={this.onKeyPress}
-            onModalClose={this.onModalClose}
-          />
-        )}
-      </div>
-    );
-  }
-}
+      )}
+      {showModal && (
+        <Modal
+          largeImageURL={largeImageURL}
+          onKeyPress={onKeyPress}
+          onModalClose={onModalClose}
+        />
+      )}
+    </div>
+  );
+};
