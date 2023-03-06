@@ -2,22 +2,24 @@ import React, { useEffect } from 'react';
 import PropTypes from 'prop-types';
 import css from './Modal.module.css';
 
-export const Modal = () => {
+export const Modal = (onModalClose, largeImageURL) => {
   useEffect(() => {
-    document.addEventListener('keydown', this.onKeyPress);
-  }, []);
-  const onKeyPress = e => {
-    if (e.keyCode === 27) {
-      handleCloseModal();
+    const onKeyPress = e => {
+      if (e.keyCode === 27) {
+        onModalClose();
+      }
+    };
+    window.addEventListener('keydown', onKeyPress);
+    return () => {
+      window.removeEventListener('keydown', onKeyPress);
+    };
+  }, [onModalClose]);
+  const onOverlayClick = evt => {
+    if (evt.currentTarget === evt.target) {
+      onModalClose();
     }
   };
-  const onOverlayClick = () => {
-    handleCloseModal();
-  };
-  const handleCloseModal = () => {
-    onModalClose();
-    removeEventListener('keydown', onKeyPress);
-  };
+
   return (
     <>
       <div id="overlay" className={css.overlay} onClick={onOverlayClick}></div>

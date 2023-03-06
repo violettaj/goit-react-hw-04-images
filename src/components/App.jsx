@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Searchbar } from './Searchbar/Searchbar';
 import { ImageGallery } from './ImageGallery/ImageGallery';
-import { fetchImages } from './Api/Api';
+import fetchImages from './Api/Api';
 import { Button } from './Button/Button';
 import { Loader } from './Loader/Loader';
 import { Modal } from './Modal/Modal';
@@ -10,71 +10,73 @@ export const App = () => {
   const [images, setImages] = useState([]);
   const [topic, setTopic] = useState('');
   const [page, setPage] = useState(1);
-  const [totalHits, setTotalHits] = useState(500);
-  const [perPage, setPerPage] = useState(12);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [ShowModal, setShowModal] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [largeImageURL, setLargeImageURL] = useState('');
+  useEffect(() => {
+    if (!topic) return;
+    const loadGallery = async () => {
+      try {
+        const request = await fetchImages(topic, page);
+        if (request.length === 0) {
+          return setError(`No found ${topic}`);
+        }
+        setImages(prevImages => [...prevImages, ...request]);
+      } catch (error) {
+        setError('Oops! Something went wrong');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const loadGallery = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetchImages(topic, page, perPage);
-      setImages(prevState => [...prevState, ...response.hits]);
-
-      setTotalHits(response);
-    } catch (error) {
-      setError(error);
-      throw new Error(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    loadGallery();
+  }, [page, topic]);
 
   const handleSubmit = e => {
     e.preventDefault();
     const value = e.target.search.value;
+    setTopic(value);
     setImages([]);
     setPage(1);
-    setTopic(value);
+    setError(null);
+    setIsLoading(true);
   };
 
   const handleMore = () => {
-    setPage(prevState => [prevState + 1]);
+    setIsLoading(true);
+    setPage(prevState => prevState + 1);
   };
 
   const handleShowModal = event => {
-    const largeImageURL = event.target.srcset;
-    setShowModal(true);
-    setLargeImageURL(largeImageURL);
+    setLargeImageURL(event.target.dataset.source);
+    onModalClose(!isLoading);
   };
   const onModalClose = () => {
-    setShowModal(false);
-    setLargeImageURL('');
+    setShowModal(!showModal);
   };
-
-  useEffect(() => {
-    loadGallery();
-  }, [page, topic]);
 
   return (
     <div>
       <Searchbar onSubmit={handleSubmit} />
-      <ImageGallery images={images} handleShowModal={handleShowModal} />
-      <Loader isLoading={isLoading} />
-      {images.length > 0 && page * perPage < totalHits && (
+      {error}
+      {images.length > 0 && !error && (
+        <ImageGallery
+          images={images}
+          error={error}
+          handleShowModal={handleShowModal}
+        />
+      )}
+      {isLoading && <Loader />}
+
+      {images.length >= 12 && !error && (
         <Button
           btnShow={isLoading ? 'Loading...' : 'Load More'}
           handleMore={handleMore}
         />
       )}
       {showModal && (
-        <Modal
-          largeImageURL={largeImageURL}
-          onKeyPress={onKeyPress}
-          onModalClose={onModalClose}
-        />
+        <Modal largeImageURL={largeImageURL} onModalClose={onModalClose} />
       )}
     </div>
   );
